@@ -103,6 +103,7 @@ function getWeatherImage(code) {
  */
 function getWeatherEmoji(weather) {
     if (!weather) return "🌤️";
+    if (weather.includes("陰有雨")) return "🌧️";
     if (weather.includes("晴")) return "☀️";
     if (weather.includes("多雲")) return "⛅";
     if (weather.includes("陰")) return "☁️";
