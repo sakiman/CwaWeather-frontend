@@ -265,6 +265,7 @@ function generate3DayFromFallback(data36h) {
  * 取第一個行政區，按日期分組並計算每日極值
  */
 function transform3DayData(rawData) {
+    console.log("原始三日預報資料：", rawData);
     // 取得第一個行政區的資料
     const locations = rawData.locations;
     const firstDistrict = locations.location[0];
@@ -345,7 +346,7 @@ function transform3DayData(rawData) {
                 comfort: data.comforts[Math.floor(data.comforts.length / 2)] || "舒適"
             };
         });
-    
+    console.log("轉換後三日預報資料：", dailyForecasts);
     return {
         city: rawData.city,
         district: districtName,
@@ -503,16 +504,37 @@ async function fetchWeather(cityKey = currentCity) {
         // 最低顯示 loading 1.5 秒
         const delayPromise = new Promise(resolve => setTimeout(resolve, 1500));
         
-        // 同時請求兩個 API
-        const fetch36h = fetch(`${API_BASE}/weather/${cityKey}`).then(res => res.json());
-        const fetch3day = fetch(`${API_BASE}/weather/3day/${cityKey}`).then(res => res.json());
-        
-        // 等待所有請求完成
-        const [_, data36h, data3day] = await Promise.all([delayPromise, fetch36h, fetch3day]);
-        
-        if (!data36h.success) {
-            throw new Error("36小時預報 API 錯誤");
-        }
+        // 同時請求兩個 API（含備援機制）
+        const fetch36hPromise = (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/weather/${cityKey}`);
+                if (!res.ok) throw new Error('API_BASE 36h HTTP error');
+                const json = await res.json();
+                if (!json.success) throw new Error('API_BASE 36h payload error');
+                return json;
+            } catch (e) {
+                console.warn('36 小時預報主 API 失敗，改用備援來源', e);
+                const backupData = await backupFetch36h(cityKey);
+                return { success: true, data: backupData };
+            }
+        })();
+
+        const fetch3dayPromise = (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/weather/3day/${cityKey}`);
+                if (!res.ok) throw new Error('API_BASE 3day HTTP error');
+                const json = await res.json();
+                if (!json.success) throw new Error('API_BASE 3day payload error');
+                return json;
+            } catch (e) {
+                console.warn('三日預報主 API 失敗，改用備援來源', e);
+                const backupData = await backupFetch3day(cityKey);
+                return { success: true, data: backupData };
+            }
+        })();
+
+        // 等待 loading delay + 兩個請求
+        const [_, data36h, data3day] = await Promise.all([delayPromise, fetch36hPromise, fetch3dayPromise]);
         
         // 轉換資料格式
         const transformed36h = transform36HourData(data36h.data);
@@ -520,7 +542,13 @@ async function fetchWeather(cityKey = currentCity) {
         let transformed3day = { forecasts: [] };
         if (data3day.success && data3day.data) {
             try {
-                transformed3day = transform3DayData(data3day.data);
+                console.log("三日預報資料：", data3day.data);
+                // 如果是備援資料（來自 CWA），使用 backup_transform3DayData
+                if (data3day.data.__fromBackupCWA3Day) {
+                    transformed3day = backup_transform3DayData(data3day.data);
+                } else {
+                    transformed3day = transform3DayData(data3day.data);
+                }
             } catch (e) {
                 console.warn("三日預報資料轉換失敗，使用替代方案", e);
                 transformed3day = generate3DayFromFallback(transformed36h);
