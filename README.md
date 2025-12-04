@@ -655,6 +655,11 @@ CwaWeather-frontend/
 
 ### 11.2 啟動方式
 
+```bash
+# 若要讓備緩機可用
+index.html?holishitKey=你的中央氣象局 CWA API KEY
+```
+
 #### 方法一：直接開啟
 
 ```bash
