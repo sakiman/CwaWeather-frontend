@@ -265,7 +265,6 @@ function generate3DayFromFallback(data36h) {
  * 取第一個行政區，按日期分組並計算每日極值
  */
 function transform3DayData(rawData) {
-    console.log("原始三日預報資料：", rawData);
     // 取得第一個行政區的資料
     const locations = rawData.locations;
     const firstDistrict = locations.location[0];
@@ -346,7 +345,6 @@ function transform3DayData(rawData) {
                 comfort: data.comforts[Math.floor(data.comforts.length / 2)] || "舒適"
             };
         });
-    console.log("轉換後三日預報資料：", dailyForecasts);
     return {
         city: rawData.city,
         district: districtName,
@@ -542,7 +540,6 @@ async function fetchWeather(cityKey = currentCity) {
         let transformed3day = { forecasts: [] };
         if (data3day.success && data3day.data) {
             try {
-                console.log("三日預報資料：", data3day.data);
                 // 如果是備援資料（來自 CWA），使用 backup_transform3DayData
                 if (data3day.data.__fromBackupCWA3Day) {
                     transformed3day = backup_transform3DayData(data3day.data);
