@@ -36,13 +36,13 @@ const GOVCODE_3DAY_MAP = {
 	kaohsiung: govCode_kaohsiung,
 };
 
-// 動態產生 3 天預報備援 API（預設用臺北市）
-function getBackup3DayUrl(cityKey = 'taipei') {
-	const code = GOVCODE_3DAY_MAP[cityKey] || govCode_taipei;
+// 動態產生 3 天預報備援 API（預設用新北市）
+function getBackup3DayUrl(cityKey = 'newtaipei') {
+	const code = GOVCODE_3DAY_MAP[cityKey] || govCode_newtaipei;
 	return `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${code}?Authorization=${holishitKey}`;
 }
 
-// 舊名保留一個 helper，方便既有程式呼叫
-function backup_3day(cityKey = 'taipei') {
+// 舊名保留一個 helper，方便既有程式呼叫（預設用新北市）
+function backup_3day(cityKey = 'newtaipei') {
 	return getBackup3DayUrl(cityKey);
 }

@@ -15,7 +15,7 @@ const CITIES = {
 };
 
 // 當前選擇的城市
-let currentCity = "taipei";
+let currentCity = "newtaipei";
 
 // 六都經緯度範圍
 const CITY_COORDINATES = {
@@ -72,7 +72,7 @@ const WEATHER_EMOJI_MAP = {
 
 // Playground 當前狀態
 let playgroundState = {
-    city: 'taipei',
+    city: currentCity,
     weatherCode: '01'
 };
 
@@ -547,7 +547,7 @@ async function fetchWeather(cityKey = currentCity) {
                     transformed3day = transform3DayData(data3day.data);
                 }
             } catch (e) {
-                console.warn("三日預報資料轉換失敗，使用替代方案", e);
+                console.warn("三日預報 API 失敗，使用 36 小時資料替代", e);
                 transformed3day = generate3DayFromFallback(transformed36h);
             }
         } else {
@@ -809,7 +809,7 @@ function initGeolocation() {
                     btn.classList.toggle('active', btn.dataset.city === detectedCity);
                 });
             } else {
-                showToast('📍 定位成功，預設顯示臺北市', 'info');
+                showToast('📍 定位成功，預設顯示新北市', 'info');
             }
             
             // 載入天氣資料
@@ -817,7 +817,7 @@ function initGeolocation() {
         },
         (error) => {
             console.log('地理定位失敗:', error.message);
-            showToast('📍 定位失敗，預設顯示臺北市', 'info');
+            showToast('📍 定位失敗，預設顯示新北市', 'info');
             
             // 載入預設城市的天氣資料
             fetchWeather(currentCity);

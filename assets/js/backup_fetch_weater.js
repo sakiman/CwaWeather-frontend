@@ -6,7 +6,7 @@
  * @returns {Promise<any>} - 回傳與 proxy 相同結構的 data36h (僅 data 區段)
  */
 async function backupFetch36h(cityKey) {
-    const cityName = CITIES[cityKey]?.name || "臺北市";
+    const cityName = CITIES[cityKey]?.name || "新北市";
     const url = `${backup_API_36h}${encodeURIComponent(cityName)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("backup 36h fetch failed");
@@ -27,7 +27,7 @@ async function backupFetch36h(cityKey) {
  * @param {string} cityKey - 六都 key (taipei/newtaipei/...)
  * @returns {Promise<any>} - 回傳給 transform3DayData 的 rawData
  */
-async function backupFetch3day(cityKey = 'taipei') {
+async function backupFetch3day(cityKey = 'newtaipei') { // 預設用新北市
     const url = backup_3day(cityKey);
     const res = await fetch(url);
     if (!res.ok) throw new Error("backup 3day fetch failed");
@@ -53,7 +53,7 @@ async function backupFetch3day(cityKey = 'taipei') {
     };
 
     return {
-        city: locationsRoot.LocationsName || (CITIES[cityKey]?.name || "臺北市"),
+        city: locationsRoot.LocationsName || (CITIES[cityKey]?.name || "新北市"),
         locations: mappedLocations,
         __fromBackupCWA3Day: true
     };
