@@ -21,6 +21,12 @@ const CITIES = {
 // 當前選擇的城市
 let currentCity = "newtaipei";
 
+// 當前選擇的行政區（對應 3day LocationName），預設由轉換函式自動決定
+let currentDistrict = "";
+
+// 三日預報原始資料快取（key: cityKey → rawData 結構，供行政區切換時重用）
+const threeDayRawCache = {};
+
 // 使用者經緯度（由瀏覽器地理定位取得，用於就近選擇 3day LocationName）
 // 會在 initGeolocation 成功後寫入 window.__userLat / window.__userLng
 
@@ -401,8 +407,21 @@ async function fetchWeather(cityKey = currentCity) {
         const transformed36h = transform36HourData(data36h.data);
         
         let transformed3day = { forecasts: [] };
+        let districtOptions = [];
         if (data3day.success && data3day.data) { // 優先取用三日預報 API
             try {
+                // 將三日預報原始資料寫入快取，供之後行政區切換時重用
+                threeDayRawCache[cityKey] = data3day.data;
+
+                // 從 3day 原始資料中取出所有 LocationName，供行政區選擇器使用
+                try {
+                    const locWrapper = data3day.data.locations;
+                    const locArray = locWrapper && Array.isArray(locWrapper.location) ? locWrapper.location : [];
+                    districtOptions = locArray.map(loc => loc.locationName).filter(Boolean);
+                } catch (e) {
+                    districtOptions = [];
+                }
+
                 // 判斷此次請求的 cityKey 是否為地理定位到的城市
                 // 若是定位城市：使用就近鄉鎮邏輯
                 // 若是手動切換到其他城市：一律使用該縣市 Location 陣列中的第一個鄉鎮
@@ -415,7 +434,13 @@ async function fetchWeather(cityKey = currentCity) {
                     // 非瀏覽器環境或無法讀取全域變數時，維持預設 false
                 }
 
-                transformed3day = transform3DayData(data3day.data, { preferNearestByLocation }); // 轉換三日預報資料為扁平結構
+                // 若已有人為選擇的行政區，則優先依該行政區計算三日預報
+                const options = {
+                    preferNearestByLocation,
+                    targetDistrictName: currentDistrict || null
+                };
+
+                transformed3day = transform3DayData(data3day.data, options); // 轉換三日預報資料為扁平結構
             } catch (e) {
                 console.warn("三日預報 API 失敗，使用 36 小時資料替代", e);
                 transformed3day = generate3DayFromFallback(transformed36h);
@@ -429,6 +454,9 @@ async function fetchWeather(cityKey = currentCity) {
         // 渲染頁面
         renderHero(transformed36h, cityKey);
         render3DayForecast(transformed3day);
+
+        // 更新行政區選擇器
+        updateDistrictSelector(districtOptions, transformed3day.district || currentDistrict || "");
         
         // 隱藏 loading，顯示主內容
         document.getElementById('loading').style.display = 'none';
@@ -448,6 +476,7 @@ function switchCity(cityKey) {
     if (cityKey === currentCity) return;
     
     currentCity = cityKey;
+    currentDistrict = ""; // 切換城市時，重置行政區選擇
     
     // 更新按鈕狀態
     document.querySelectorAll('.city-btn').forEach(btn => {
@@ -467,6 +496,78 @@ function initCitySelector() {
             switchCity(btn.dataset.city);
         });
     });
+}
+
+/**
+ * 更新行政區選擇器選項與選中狀態
+ * @param {string[]} options - 所有 LocationName
+ * @param {string} selected - 目前使用中的行政區名稱
+ */
+function updateDistrictSelector(options, selected) {
+    const list = document.getElementById('districtList');
+    if (!list) return;
+
+    // 若沒有任何 options，顯示簡單提示
+    if (!options || options.length === 0) {
+        list.innerHTML = '<span class="district-empty">無行政區資料</span>';
+        return;
+    }
+
+    const effectiveSelected = selected && options.includes(selected) ? selected : options[0];
+    currentDistrict = effectiveSelected;
+
+    list.innerHTML = options.map(name => `
+        <button type="button" class="district-btn${name === effectiveSelected ? ' active' : ''}" data-district="${name}">${name}</button>
+    `).join('');
+
+    // 綁定點擊事件
+    list.querySelectorAll('.district-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const value = btn.dataset.district || "";
+            if (!value || value === currentDistrict) return;
+            currentDistrict = value;
+
+            // 使用快取的三日預報資料重新計算該行政區的三日預報
+            refreshThreeDayForecastFromCache();
+        });
+    });
+}
+
+/**
+ * 使用快取的三日預報原始資料，依當前城市與行政區重新渲染三日預報
+ * 若快取不存在，退回完整 fetch 流程
+ */
+function refreshThreeDayForecastFromCache() {
+    const raw = threeDayRawCache[currentCity];
+    if (!raw) {
+        // 若尚未有快取（例如第一次點擊），退回完整流程
+        fetchWeather(currentCity);
+        return;
+    }
+
+    // 從快取 raw 取出所有 LocationName 供行政區列表使用
+    let districtOptions = [];
+    try {
+        const locWrapper = raw.locations;
+        const locArray = locWrapper && Array.isArray(locWrapper.location) ? locWrapper.location : [];
+        districtOptions = locArray.map(loc => loc.locationName).filter(Boolean);
+    } catch (e) {
+        districtOptions = [];
+    }
+
+    // 依目前選擇的行政區重新轉換三日預報（此時不需就近邏輯）
+    const options = {
+        preferNearestByLocation: false,
+        targetDistrictName: currentDistrict || null
+    };
+
+    const transformed3day = transform3DayData(raw, options);
+
+    // 只需重新渲染三日預報卡片，36h Hero 保持不變
+    render3DayForecast(transformed3day);
+
+    // 更新行政區按鈕 active 狀態
+    updateDistrictSelector(districtOptions, transformed3day.district || currentDistrict || "");
 }
 
 // ============================================

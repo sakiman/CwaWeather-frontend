@@ -104,7 +104,10 @@ function transform3DayData(rawData, options = {}) {
     // 為 false 時：
     //   一律使用 Location 陣列中的第一個行政區
     //   （適用於：手動切換到非定位城市時，直接顯示該縣市第一個鄉鎮，例如新北市→板橋區）
-    const { preferNearestByLocation = true } = options || {};
+    const {
+        preferNearestByLocation = true,
+        targetDistrictName = null // 若指定，將直接選用該 LocationName 對應的鄉鎮
+    } = options || {};
 
     const locationsWrapper = rawData.locations;
     const locationsArray = locationsWrapper && Array.isArray(locationsWrapper.location)
@@ -121,7 +124,13 @@ function transform3DayData(rawData, options = {}) {
 
     let selectedDistrict = locationsArray[0];
 
-    if (preferNearestByLocation) {
+    // 若有指定 targetDistrictName，優先直接用該行政區
+    if (targetDistrictName) {
+        const matched = locationsArray.find(loc => loc.locationName === targetDistrictName);
+        if (matched) {
+            selectedDistrict = matched;
+        }
+    } else if (preferNearestByLocation) {
         // 1) 嘗試使用 Nominatim suburb 直接比對 LocationName
         let selectedBySuburb = false;
         try {

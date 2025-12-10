@@ -182,6 +182,51 @@ body {
     justify-content: center;
 }
 
+/* 行政區選擇器（pill 展開） */
+.district-selector {
+    margin: 0.75rem 0 0.4rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.district-label {
+    font-size: 0.8rem;
+    color: var(--text-medium);
+    padding-left: 4px;
+}
+
+.district-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.district-btn {
+    font-family: inherit;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.25);
+    color: var(--text-dark);
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-soft);
+    transition: all 0.2s ease-out;
+}
+
+.district-btn:hover {
+    transform: translateY(-1px);
+    background: var(--kawaii-cream);
+}
+
+.district-btn.active {
+    background: #ef749e;
+    color: var(--kawaii-white);
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: var(--shadow-soft), 0 0 0 2px rgba(231, 79, 223, 0.5);
+}
+
 .header-cities::-webkit-scrollbar {
     display: none;
 }
@@ -215,7 +260,7 @@ body {
 .city-btn.active {
     background: var(--kawaii-white);
     border-color: #f94f74;
-    border-width: 4px;
+    border-width: 2px;
     box-shadow: var(--shadow-soft), 0 0 0 2px rgba(255, 181, 197, 0.3);
 }
 
