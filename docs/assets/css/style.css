@@ -182,9 +182,64 @@ body {
     justify-content: center;
 }
 
+/* 行政區 card */
+.district-card {
+    margin: 0.75rem 0 0.4rem 0;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    font-family: inherit;
+}
+
+.district-card-header {
+    width: 100%;
+    padding: 0.55rem 0.85rem;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.district-card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.district-card-hint {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+.district-card-icon {
+    font-size: 0.9rem;
+    color: var(--kawaii-pink);
+    transition: transform 0.2s ease;
+}
+
+.district-card-body {
+    padding: 0 0.75rem 0.6rem 0.75rem;
+}
+
+.district-card-collapsed .district-card-body {
+    display: none;
+}
+
+.district-card-expanded .district-card-body {
+    display: block;
+}
+
+.district-card-expanded .district-card-icon {
+    transform: rotate(45deg); /* ＋ 轉成 × 的感覺 */
+}
+
 /* 行政區選擇器（pill 展開） */
 .district-selector {
-    margin: 0.75rem 0 0.4rem 0;
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
@@ -209,7 +264,7 @@ body {
     border: 1px solid transparent;
     background: rgba(255, 255, 255, 0.25);
     color: var(--text-dark);
-    font-size: 1rem;
+    font-size: 0.85rem;
     cursor: pointer;
     box-shadow: var(--shadow-soft);
     transition: all 0.2s ease-out;

@@ -890,5 +890,15 @@ function initGeolocation() {
 document.addEventListener("DOMContentLoaded", () => {
     initCitySelector();
     initPlayground();
+    // 行政區 card 收合切換
+    const districtCard = document.getElementById('districtCard');
+    const districtCardHeader = document.getElementById('districtCardHeader');
+    if (districtCard && districtCardHeader) {
+        districtCardHeader.addEventListener('click', () => {
+            const isCollapsed = districtCard.classList.contains('district-card-collapsed');
+            districtCard.classList.toggle('district-card-collapsed', !isCollapsed);
+            districtCard.classList.toggle('district-card-expanded', isCollapsed);
+        });
+    }
     initGeolocation(); // 啟動地理定位
 });

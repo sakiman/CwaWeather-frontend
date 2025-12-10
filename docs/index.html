@@ -72,11 +72,21 @@
                 <span class="title-icon">📅</span>
                 三日預報
             </h2>
-            <!-- 行政區選擇器：由 JS 依 3day LocationName 動態填入，展開為 pill 按鈕 -->
-            <div class="district-selector">
-                <span class="district-label">行政區</span>
-                <div id="districtList" class="district-list">
-                    <!-- 由 JS 動態生成行政區按鈕 -->
+
+            <!-- 行政區 card（預設收起，點擊展開） -->
+            <div class="district-card district-card-collapsed" id="districtCard">
+                <button type="button" class="district-card-header" id="districtCardHeader">
+                    <span class="district-card-title">行政區</span>
+                    <span class="district-card-hint">點此展開</span>
+                    <span class="district-card-icon" aria-hidden="true">＋</span>
+                </button>
+                <div class="district-card-body">
+                    <!-- 行政區選擇器：由 JS 依 3day LocationName 動態填入，展開為 pill 按鈕 -->
+                    <div class="district-selector">
+                        <div id="districtList" class="district-list">
+                            <!-- 由 JS 動態生成行政區按鈕 -->
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="forecast-grid" id="forecastGrid">
