@@ -16,7 +16,7 @@ const holishitKey = (() => {
 
 // 今明 36 小時預報
 const govCode_36h = "F-C0032-001"; // 今明 36 小時
-const backup_API_36h = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${govCode_36h}?Authorization=${holishitKey}&format=JSON&locationName=`;
+const API_36h = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${govCode_36h}?Authorization=${holishitKey}&format=JSON&locationName=`;
 
 // 3 天預報
 const govCode_taipei = "F-D0047-061"; // 臺北市
@@ -36,13 +36,13 @@ const GOVCODE_3DAY_MAP = {
 	kaohsiung: govCode_kaohsiung,
 };
 
-// 動態產生 3 天預報備援 API（預設用新北市）
-function getBackup3DayUrl(cityKey = 'newtaipei') {
+// 動態產生 3 天預報 API（預設用新北市）
+function get3DayUrl(cityKey = 'newtaipei') {
 	const code = GOVCODE_3DAY_MAP[cityKey] || govCode_newtaipei;
 	return `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${code}?Authorization=${holishitKey}`;
 }
 
 // 舊名保留一個 helper，方便既有程式呼叫（預設用新北市）
-function backup_3day(cityKey = 'newtaipei') {
-	return getBackup3DayUrl(cityKey);
+function url_3day(cityKey = 'newtaipei') {
+	return get3DayUrl(cityKey);
 }

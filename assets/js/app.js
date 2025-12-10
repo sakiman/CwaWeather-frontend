@@ -2,7 +2,11 @@
 // 寶可天氣 - Japanese Magazine Kawaii Style
 // ============================================
 
-const API_BASE = "https://hex-cwa.zeabur.app/api";
+// 中央氣象署開放資料平臺之資料擷取API
+// https://opendata.cwa.gov.tw/dist/opendata-swagger.html
+
+// Nominatim 反向地理編碼服務
+// https://nominatim.org/release-docs/develop/api/Reverse/
 
 // 六都城市設定
 const CITIES = {
@@ -16,6 +20,10 @@ const CITIES = {
 
 // 當前選擇的城市
 let currentCity = "newtaipei";
+
+// 使用者經緯度（由瀏覽器地理定位取得，用於就近選擇 3day LocationName）
+// 會在 initGeolocation 成功後寫入 window.__userLat / window.__userLng
+
 
 // 六都經緯度範圍
 const CITY_COORDINATES = {
@@ -172,47 +180,6 @@ function formatShortDate(date) {
     return `${month}/${day}(${weekdays[d.getDay()]})`;
 }
 
-// ============================================
-// API 資料轉換函式
-// ============================================
-
-/**
- * 轉換 36 小時預報 API 資料
- * 從 weatherElement[] 多維陣列轉換為 forecasts[] 扁平結構
- */
-function transform36HourData(rawData) {
-    const location = rawData.location;
-    const elements = location.weatherElement;
-    
-    // 建立 elementName → data 的映射
-    const elementMap = {};
-    elements.forEach(el => {
-        elementMap[el.elementName] = el.time;
-    });
-    
-    // 取得時段數量（以 Wx 為基準）
-    const timeCount = elementMap.Wx ? elementMap.Wx.length : 0;
-    const forecasts = [];
-    
-    for (let i = 0; i < timeCount; i++) {
-        forecasts.push({
-            startTime: elementMap.Wx[i].startTime,
-            endTime: elementMap.Wx[i].endTime,
-            weather: elementMap.Wx[i].parameter.parameterName,
-            weatherCode: elementMap.Wx[i].parameter.parameterValue,
-            rain: elementMap.PoP ? elementMap.PoP[i].parameter.parameterName : "0",
-            minTemp: elementMap.MinT ? elementMap.MinT[i].parameter.parameterName : "20",
-            maxTemp: elementMap.MaxT ? elementMap.MaxT[i].parameter.parameterName : "30",
-            comfort: elementMap.CI ? elementMap.CI[i].parameter.parameterName : "舒適"
-        });
-    }
-    
-    return {
-        city: rawData.city,
-        forecasts
-    };
-}
-
 /**
  * 從 36 小時預報資料生成替代的三日預報
  * 當三日預報 API 失敗時使用
@@ -256,98 +223,6 @@ function generate3DayFromFallback(data36h) {
     
     return {
         city: data36h.city,
-        forecasts: dailyForecasts
-    };
-}
-
-/**
- * 轉換三日預報 API 資料
- * 取第一個行政區，按日期分組並計算每日極值
- */
-function transform3DayData(rawData) {
-    // 取得第一個行政區的資料
-    const locations = rawData.locations;
-    const firstDistrict = locations.location[0];
-    const districtName = firstDistrict.locationName;
-    const elements = firstDistrict.weatherElement;
-    
-    // 建立 elementName → data 的映射
-    const elementMap = {};
-    elements.forEach(el => {
-        elementMap[el.elementName] = el.time;
-    });
-    
-    // 按日期分組
-    const dailyData = {};
-    const wxData = elementMap.Wx || [];
-    
-    wxData.forEach((item, index) => {
-        const date = parseDateTime(item.startTime);
-        const dateKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-        
-        if (!dailyData[dateKey]) {
-            dailyData[dateKey] = {
-                date: item.startTime,
-                weathers: [],
-                weatherCodes: [],
-                temps: [],
-                rains: [],
-                comforts: []
-            };
-        }
-        
-        // 收集天氣描述和代碼
-        if (item.elementValue && item.elementValue[0]) {
-            dailyData[dateKey].weathers.push(item.elementValue[0].value);
-            dailyData[dateKey].weatherCodes.push(item.elementValue[1]?.value || '00');
-        }
-        
-        // 收集溫度（MinT）
-        if (elementMap.MinT && elementMap.MinT[index]) {
-            const minT = elementMap.MinT[index].elementValue?.[0]?.value;
-            if (minT) dailyData[dateKey].temps.push(parseInt(minT));
-        }
-        
-        // 收集溫度（MaxT）
-        if (elementMap.MaxT && elementMap.MaxT[index]) {
-            const maxT = elementMap.MaxT[index].elementValue?.[0]?.value;
-            if (maxT) dailyData[dateKey].temps.push(parseInt(maxT));
-        }
-        
-        // 收集降雨機率
-        if (elementMap.PoP12h && elementMap.PoP12h[Math.floor(index / 4)]) {
-            const pop = elementMap.PoP12h[Math.floor(index / 4)].elementValue?.[0]?.value;
-            if (pop) dailyData[dateKey].rains.push(parseInt(pop));
-        }
-        
-        // 收集舒適度
-        if (elementMap.CI && elementMap.CI[index]) {
-            const ci = elementMap.CI[index].elementValue?.[0]?.value;
-            if (ci) dailyData[dateKey].comforts.push(ci);
-        }
-    });
-    
-    // 計算每日統計值
-    const dailyForecasts = Object.entries(dailyData)
-        .slice(0, 3) // 只取三天
-        .map(([key, data]) => {
-            const temps = data.temps.length > 0 ? data.temps : [25];
-            const rains = data.rains.length > 0 ? data.rains : [0];
-            
-            return {
-                date: data.date,
-                dateFormatted: formatDate(data.date),
-                weather: data.weathers[Math.floor(data.weathers.length / 2)] || "多雲",
-                weatherCode: data.weatherCodes[Math.floor(data.weatherCodes.length / 2)] || "04",
-                minTemp: Math.min(...temps),
-                maxTemp: Math.max(...temps),
-                rainProb: Math.max(...rains),
-                comfort: data.comforts[Math.floor(data.comforts.length / 2)] || "舒適"
-            };
-        });
-    return {
-        city: rawData.city,
-        district: districtName,
         forecasts: dailyForecasts
     };
 }
@@ -432,10 +307,13 @@ function render3DayForecast(data) {
         const dayLabel = index === 0 ? '今天' : index === 1 ? '明天' : '後天';
         const imgSrc = getWeatherImage(day.weatherCode);
         const paddedCode = String(day.weatherCode || '00').padStart(2, '0');
+        const hasCoords = typeof data.lat === 'number' && typeof data.lng === 'number';
         
         return `
             <div class="forecast-card">
                 <div class="forecast-day">${dayLabel}</div>
+                ${data.district ? `<div class="forecast-district">${data.district}</div>` : ''}
+                ${hasCoords ? `<div class="forecast-coord">緯度 ${data.lat.toFixed(4)}，經度 ${data.lng.toFixed(4)}</div>` : ''}
                 <div class="forecast-date">${day.dateFormatted}</div>
                 
                 <div class="forecast-img-container" title="Playground" data-weather-code="${paddedCode}" onclick="openPlayground('${paddedCode}')">
@@ -502,50 +380,42 @@ async function fetchWeather(cityKey = currentCity) {
         // 最低顯示 loading 1.5 秒
         const delayPromise = new Promise(resolve => setTimeout(resolve, 1500));
         
-        // 同時請求兩個 API（含備援機制）
+        // 同時請求兩個 API（直接使用中央氣象署資料）
         const fetch36hPromise = (async () => {
-            try {
-                const res = await fetch(`${API_BASE}/weather/${cityKey}`);
-                if (!res.ok) throw new Error('API_BASE 36h HTTP error');
-                const json = await res.json();
-                if (!json.success) throw new Error('API_BASE 36h payload error');
-                return json;
-            } catch (e) {
-                console.warn('36 小時預報主 API 失敗，改用備援來源', e);
-                const backupData = await backupFetch36h(cityKey);
-                return { success: true, data: backupData };
-            }
+            const fetchWeatherData36h = await Fetch36h(cityKey);
+            return { success: true, data: fetchWeatherData36h };
         })();
 
         const fetch3dayPromise = (async () => {
-            try {
-                const res = await fetch(`${API_BASE}/weather/3day/${cityKey}`);
-                if (!res.ok) throw new Error('API_BASE 3day HTTP error');
-                const json = await res.json();
-                if (!json.success) throw new Error('API_BASE 3day payload error');
-                return json;
-            } catch (e) {
-                console.warn('三日預報主 API 失敗，改用備援來源', e);
-                const backupData = await backupFetch3day(cityKey);
-                return { success: true, data: backupData };
-            }
+            const fetchWeatherData3day = await Fetch3day(cityKey);
+            return { success: true, data: fetchWeatherData3day };
         })();
 
         // 等待 loading delay + 兩個請求
         const [_, data36h, data3day] = await Promise.all([delayPromise, fetch36hPromise, fetch3dayPromise]);
         
-        // 轉換資料格式
+        /**
+         * 呼叫 transform36HourData 轉換 36 小時預報 API 資料
+         * 從 weatherElement[] 多維陣列轉換為 forecasts[] 扁平結構
+         */
         const transformed36h = transform36HourData(data36h.data);
         
         let transformed3day = { forecasts: [] };
-        if (data3day.success && data3day.data) {
+        if (data3day.success && data3day.data) { // 優先取用三日預報 API
             try {
-                // 如果是備援資料（來自 CWA），使用 backup_transform3DayData
-                if (data3day.data.__fromBackupCWA3Day) {
-                    transformed3day = backup_transform3DayData(data3day.data);
-                } else {
-                    transformed3day = transform3DayData(data3day.data);
+                // 判斷此次請求的 cityKey 是否為地理定位到的城市
+                // 若是定位城市：使用就近鄉鎮邏輯
+                // 若是手動切換到其他城市：一律使用該縣市 Location 陣列中的第一個鄉鎮
+                let preferNearestByLocation = false;
+                try {
+                    if (typeof window !== 'undefined' && window.__detectedCityKey && window.__detectedCityKey === cityKey) {
+                        preferNearestByLocation = true;
+                    }
+                } catch (e) {
+                    // 非瀏覽器環境或無法讀取全域變數時，維持預設 false
                 }
+
+                transformed3day = transform3DayData(data3day.data, { preferNearestByLocation }); // 轉換三日預報資料為扁平結構
             } catch (e) {
                 console.warn("三日預報 API 失敗，使用 36 小時資料替代", e);
                 transformed3day = generate3DayFromFallback(transformed36h);
@@ -750,6 +620,41 @@ function renderPlaygroundWeathers() {
 // ============================================
 
 /**
+ * 使用 OpenStreetMap Nominatim 進行反向地理編碼，取得 suburb（行政區近似）與 city（縣市中文名）
+ * API: https://nominatim.openstreetmap.org/reverse?lat={緯度}&lon={經度}&format=json&addressdetails=1
+ */
+async function fetchSuburbFromCoords(lat, lng) {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&format=json&addressdetails=1`;
+
+    const res = await fetch(url, {
+        headers: {
+            'Accept': 'application/json',
+            // 根據 Nominatim 使用規範，建議提供識別用的 User-Agent
+            'User-Agent': 'CwaWeather-frontend/1.0 (https://example.com)'
+        }
+    });
+
+    if (!res.ok) {
+        throw new Error('Reverse geocoding failed');
+    }
+
+    const data = await res.json();
+    const addr = data && data.address ? data.address : {};
+    const suburb = addr.suburb || null;
+    const cityName = addr.city || null; // 例如："臺北市"
+
+    try {
+        // 將 suburb / city 暫存到全域，方便除錯或後續 mapping 使用
+        window.__osmSuburb = suburb;
+        window.__osmCity = cityName;
+    } catch (e) {
+        // 非瀏覽器環境可忽略
+    }
+
+    return suburb;
+}
+
+/**
  * 顯示 Toast 通知
  * @param {string} message - 通知訊息
  * @param {string} type - 類型 ('success' | 'info' | 'warning')
@@ -796,12 +701,60 @@ function initGeolocation() {
     }
     
     navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
             const { latitude, longitude } = position.coords;
-            const detectedCity = getCityFromCoordinates(latitude, longitude);
+
+            // 將使用者座標寫入全域，供 3day 轉換時就近選擇 LocationName 使用
+            try {
+                window.__userLat = latitude;
+                window.__userLng = longitude;
+
+                console.log(`使用者座標：緯度 ${latitude}, 經度 ${longitude}`);
+            } catch (e) {
+                // 在非瀏覽器環境忽略
+            }
+
+            // 反向地理編碼取得 suburb / city（city 會是中文，如「臺北市」）
+            try {
+                const suburb = await fetchSuburbFromCoords(latitude, longitude);
+                if (suburb) {
+                    console.log('Nominatim suburb:', suburb);
+                } else {
+                    console.log('Nominatim suburb 未取得');
+                }
+            } catch (e) {
+                console.warn('Nominatim 反向地理編碼失敗:', e.message);
+            }
+            
+            // 優先使用 Nominatim 回傳的 city（中文）對應到 CITIES 的英文 key
+            let detectedCity = null;
+            try {
+                if (typeof window !== 'undefined' && window.__osmCity) {
+                    const osmCityName = window.__osmCity; // 例如：「臺北市」
+                    for (const [key, city] of Object.entries(CITIES)) {
+                        if (city.name === osmCityName) {
+                            detectedCity = key;
+                            break;
+                        }
+                    }
+                }
+            } catch (e) {
+                // 若無法讀取 __osmCity，退回下一步座標判斷
+            }
+
+            // 若 Nominatim city 無法對應，退回原本的經緯度範圍判斷
+            if (!detectedCity) {
+                detectedCity = getCityFromCoordinates(latitude, longitude);
+            }
             
             if (detectedCity) {
                 currentCity = detectedCity;
+                try {
+                    // 紀錄地理定位得到的城市 key，供後續判斷是否為「定位城市」使用
+                    window.__detectedCityKey = detectedCity;
+                } catch (e) {
+                    // 非瀏覽器環境可忽略
+                }
                 showToast(`📍 已定位到${CITIES[detectedCity].name}`, 'success');
                 
                 // 更新城市選擇器的 active 狀態

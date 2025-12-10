@@ -214,7 +214,8 @@ body {
 
 .city-btn.active {
     background: var(--kawaii-white);
-    border-color: var(--kawaii-pink);
+    border-color: #f94f74;
+    border-width: 4px;
     box-shadow: var(--shadow-soft), 0 0 0 2px rgba(255, 181, 197, 0.3);
 }
 
@@ -499,6 +500,12 @@ body {
     font-weight: 800;
     color: var(--kawaii-pink);
     margin-bottom: 2px;
+}
+
+.forecast-coord {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-bottom: 12px;
 }
 
 .forecast-date {
