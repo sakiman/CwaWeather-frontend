@@ -590,20 +590,20 @@ quadrantChart
 
 ```
 CwaWeather-frontend/
-├── 📄 index.html          # 主頁面 (HTML 骨架)
 ├── 📄 README.md           # 專案文件
-│
-├── 📁 assets/
-│   ├── 📁 css/
-│   │   └── 🎨 style.css   # Kawaii 風格樣式
-│   │
-│   ├── 📁 js/
-│   │   └── ⚡ app.js      # 核心 JavaScript
-│   │
-│   └── 📁 img/
-│       ├── 🖼️ icon.png    # 網站圖示
-│       ├── 🌆 bg-*.jpeg   # 城市背景圖 (6張)
-│       └── 🎨 w*.jpg      # 天氣圖示 (13張)
+└── 📁 docs/
+    ├── 📄 index.html          # 主頁面 (HTML 骨架)
+    ├── 📁 assets/
+    │   ├── 📁 css/
+    │   │   └── 🎨 style.css   # Kawaii 風格樣式
+    │   │
+    │   ├── 📁 js/
+    │   │   └── ⚡ app.js      # 核心 JavaScript
+    │   │
+    │   └── 📁 img/
+    │       ├── 🖼️ icon.png    # 網站圖示
+    │       ├── 🌆 bg-*.jpeg   # 城市背景圖 (6張)
+    │       └── 🎨 w*.jpg      # 天氣圖示 (13張)
 │
 └── 📁 doc/
     ├── 📋 api.md          # API 規格文件
