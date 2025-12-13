@@ -22,6 +22,7 @@ const API_36h = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${govCode_36h
 const govCode_taipei = "F-D0047-061"; // 臺北市
 const govCode_newtaipei = "F-D0047-069"; // 新北市
 const govCode_taoyuan = "F-D0047-005"; // 桃園市
+const govCode_hsinchu = "F-D0047-053"; // 新竹市
 const govCode_taichung = "F-D0047-073"; // 臺中市
 const govCode_tainan = "F-D0047-077"; // 臺南市
 const govCode_kaohsiung = "F-D0047-065"; // 高雄市
@@ -31,6 +32,7 @@ const GOVCODE_3DAY_MAP = {
 	taipei: govCode_taipei,
 	newtaipei: govCode_newtaipei,
 	taoyuan: govCode_taoyuan,
+	hsinchu: govCode_hsinchu,
 	taichung: govCode_taichung,
 	tainan: govCode_tainan,
 	kaohsiung: govCode_kaohsiung,

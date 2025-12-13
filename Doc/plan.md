@@ -88,6 +88,7 @@
 | `taipei` | 臺北市 |
 | `newtaipei` | 新北市 |
 | `taoyuan` | 桃園市 |
+| `hsinchu` | 新竹市 |
 | `taichung` | 臺中市 |
 | `tainan` | 臺南市 |
 | `kaohsiung` | 高雄市 |

@@ -15,6 +15,7 @@ https://hex-cwa.zeabur.app/
 | 臺北市 | `taipei` | `臺北市` |
 | 新北市 | `newtaipei` | `新北市` |
 | 桃園市 | `taoyuan` | `桃園市` |
+| 新竹市 | `hsinchu` | `新竹市` |
 | 臺中市 | `taichung` | `臺中市` |
 | 臺南市 | `tainan` | `臺南市` |
 | 高雄市 | `kaohsiung` | `高雄市` |
@@ -42,6 +43,7 @@ GET /
     { "key": "taipei", "name": "臺北市" },
     { "key": "newtaipei", "name": "新北市" },
     { "key": "taoyuan", "name": "桃園市" },
+    { "key": "hsinchu", "name": "新竹市" },
     { "key": "taichung", "name": "臺中市" },
     { "key": "tainan", "name": "臺南市" },
     { "key": "kaohsiung", "name": "高雄市" }
@@ -274,6 +276,7 @@ GET /api/weather/3day/kaohsiung
     { "key": "taipei", "name": "臺北市" },
     { "key": "newtaipei", "name": "新北市" },
     { "key": "taoyuan", "name": "桃園市" },
+    { "key": "hsinchu", "name": "新竹市" },
     { "key": "taichung", "name": "臺中市" },
     { "key": "tainan", "name": "臺南市" },
     { "key": "kaohsiung", "name": "高雄市" }

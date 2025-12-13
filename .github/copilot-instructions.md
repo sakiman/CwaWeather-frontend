@@ -35,7 +35,7 @@ doc/api.md           # 後端 API 規格文件
 | `GET /weather/{city}` | 36 小時預報 | Hero 區塊 |
 | `GET /weather/3day/{city}` | 三日預報 | 三日卡片 Grid |
 
-支援城市 key：`taipei`, `newtaipei`, `taoyuan`, `taichung`, `tainan`, `kaohsiung`
+支援城市 key：`taipei`, `newtaipei`, `taoyuan`, `hsinchu`, `taichung`, `tainan`, `kaohsiung`
 
 ## 關鍵資料轉換
 

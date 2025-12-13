@@ -10,12 +10,13 @@
 
 // 六都城市設定
 const CITIES = {
-    kaohsiung: { name: "高雄市", emoji: "🏙️" },
     taipei: { name: "臺北市", emoji: "🗼" },
     newtaipei: { name: "新北市", emoji: "🌉" },
     taoyuan: { name: "桃園市", emoji: "✈️" },
+    hsinchu: { name: "新竹市", emoji: "🎠" },
     taichung: { name: "臺中市", emoji: "🎡" },
-    tainan: { name: "臺南市", emoji: "🏯" }
+    tainan: { name: "臺南市", emoji: "🏯" },
+    kaohsiung: { name: "高雄市", emoji: "🏙️" }
 };
 
 // 當前選擇的城市
@@ -36,6 +37,7 @@ const CITY_COORDINATES = {
     taipei: { lat: [24.95, 25.20], lng: [121.45, 121.65] },
     newtaipei: { lat: [24.60, 25.30], lng: [121.30, 122.00] },
     taoyuan: { lat: [24.80, 25.10], lng: [121.10, 121.50] },
+    hsinchu: { lat: [24.75, 24.90], lng: [120.90, 121.10] },
     taichung: { lat: [24.00, 24.35], lng: [120.50, 121.00] },
     tainan: { lat: [22.85, 23.20], lng: [120.05, 120.50] },
     kaohsiung: { lat: [22.50, 22.85], lng: [120.20, 120.50] }
