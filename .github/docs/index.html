@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>台灣六都天氣預報</title>
+    <link rel="icon" type="image/png" href="./assets/img/icon.png">
+    <link rel="apple-touch-icon" href="./assets/img/icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/img/icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="loading-screen">
+        <div class="loading-icon">☁️</div>
+        <p class="loading-text">正在觀測雲的流動...</p>
+        <div class="loading-dots">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="main-content" style="display: none;">
+        
+        <!-- Header with Date and City Selector -->
+        <header class="header">
+            <nav class="header-cities">
+                <button class="city-btn active" data-city="taipei">
+                    <span class="city-emoji">🗼</span>
+                    <span class="city-name">臺北市</span>
+                </button>
+                <button class="city-btn" data-city="newtaipei">
+                    <span class="city-emoji">🌉</span>
+                    <span class="city-name">新北市</span>
+                </button>
+                <button class="city-btn" data-city="taoyuan">
+                    <span class="city-emoji">✈️</span>
+                    <span class="city-name">桃園市</span>
+                </button>
+                <button class="city-btn" data-city="taichung">
+                    <span class="city-emoji">🎡</span>
+                    <span class="city-name">臺中市</span>
+                </button>
+                <button class="city-btn" data-city="tainan">
+                    <span class="city-emoji">🏯</span>
+                    <span class="city-name">臺南市</span>
+                </button>
+                <button class="city-btn" data-city="kaohsiung">
+                    <span class="city-emoji">🏙️</span>
+                    <span class="city-name">高雄市</span>
+                </button>
+            </nav>
+        </header>
+
+        <!-- Hero Section - 36 Hour Forecast (移至最上方，滿版無圓角) -->
+        <section id="heroSection" class="hero-section">
+            <div class="hero-overlay"></div>
+            <div class="hero-content" id="heroCard">
+                <!-- Dynamic content loaded by JS -->
+            </div>
+        </section>
+
+        <!-- 3-Day Forecast Section -->
+        <section class="forecast-section">
+            <h2 class="section-title">
+                <span class="title-icon">📅</span>
+                三日預報
+            </h2>
+
+            <!-- 行政區 card（預設收起，點擊展開） -->
+            <div class="district-card district-card-collapsed" id="districtCard">
+                <button type="button" class="district-card-header" id="districtCardHeader">
+                    <span class="district-card-title">行政區</span>
+                    <span class="district-card-hint">點此展開</span>
+                    <span class="district-card-icon" aria-hidden="true">＋</span>
+                </button>
+                <div class="district-card-body">
+                    <!-- 行政區選擇器：由 JS 依 3day LocationName 動態填入，展開為 pill 按鈕 -->
+                    <div class="district-selector">
+                        <div id="districtList" class="district-list">
+                            <!-- 由 JS 動態生成行政區按鈕 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="forecast-grid" id="forecastGrid">
+                <!-- Dynamic content loaded by JS -->
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>資料來源：中央氣象署 ☁️</p>
+            <p>原始作者：Brian／修改作者：Sankalp</p>
+        </footer>
+
+    </div>
+
+    <!-- Playground Modal -->
+    <div id="playgroundModal" class="playground-modal">
+        <div class="playground-backdrop"></div>
+        <div class="playground-container">
+            <!-- 關閉按鈕 -->
+            <button class="playground-close" aria-label="關閉">✕</button>
+            
+            <!-- 上方預覽區（21:9 比例） -->
+            <div class="playground-preview">
+                <img class="playground-bg" id="playgroundBg" src="./assets/img/bg-taipei.jpeg" alt="City Background">
+                <div class="playground-overlay"></div>
+                <div class="playground-center">
+                    <!-- 左側：寶可夢圓框（較大） -->
+                    <div class="pg-pokemon-frame">
+                        <img id="pgPokemonImg" src="./assets/img/w01.jpg" alt="Pokemon" onerror="this.onerror=null; this.src='./assets/img/w00.jpg';">
+                    </div>
+                    <!-- 右側：天氣圖示 + 文字 -->
+                    <div class="pg-weather-info">
+                        <div class="pg-weather-emoji" id="pgWeatherEmoji">☀️</div>
+                        <div class="pg-weather-text" id="pgWeatherText">晴天</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 下方控制區 -->
+            <div class="playground-controls">
+                <!-- 左側：城市選擇 -->
+                <div class="pg-cities">
+                    <h3 class="pg-section-title">🏙️ 選擇城市</h3>
+                    <div class="pg-city-grid" id="pgCityGrid">
+                        <!-- 六都按鈕由 JS 動態生成 -->
+                    </div>
+                </div>
+                
+                <!-- 右側：天氣圖示選擇 -->
+                <div class="pg-weathers">
+                    <h3 class="pg-section-title">☀️ 選擇天氣</h3>
+                    <div class="pg-weather-grid" id="pgWeatherGrid">
+                        <!-- 天氣圖示由 JS 動態生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="./assets/js/share.js"></script>
+    <script src="./assets/js/transformCWAdata.js"></script>
+    <script src="./assets/js/fetch_weater.js"></script>
+    <script src="./assets/js/app.js"></script>
+</body>
+
+</html>

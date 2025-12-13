@@ -97,7 +97,7 @@ function transform36HourData(rawData) {
  */
 
 function transform3DayData(rawData, options = {}) {
-    // console.log('transform3DayData rawData', rawData);
+    console.log('transform3DayData rawData', rawData);
     // rawData 來自 Fetch3day，結構請參考 3day.json 範例
     // options.preferNearestByLocation 為 true 時：
     //   優先依 Nominatim suburb 直接比對 LocationName，其次才使用「最近座標」挑選行政區
@@ -130,7 +130,7 @@ function transform3DayData(rawData, options = {}) {
         const matched = locationsArray.find(loc => loc.locationName === targetDistrictName);
         if (matched) {
             selectedDistrict = matched;
-            // console.log('使用指定的 targetDistrictName 選擇行政區：', targetDistrictName);
+            console.log('使用指定的 targetDistrictName 選擇行政區：', targetDistrictName);
         }
     } else if (preferNearestByLocation) {
         // 1) 嘗試使用 Nominatim suburb 直接比對 LocationName
@@ -142,7 +142,7 @@ function transform3DayData(rawData, options = {}) {
                 if (matched) {
                     selectedDistrict = matched;
                     selectedBySuburb = true;
-                    // console.log('使用 Nominatim suburb 選擇行政區：', suburb);
+                    console.log('使用 Nominatim suburb 選擇行政區：', suburb);
                 }
             }
         } catch (e) {
@@ -172,7 +172,7 @@ function transform3DayData(rawData, options = {}) {
                         }
                     });
 
-                    // console.log('使用最近座標選擇行政區：', selectedDistrict.locationName);
+                    console.log('使用最近座標選擇行政區：', selectedDistrict.locationName);
                 }
             } catch (e) {
                 // 若在非瀏覽器環境或 window 未定義，直接使用預設的第一個行政區
@@ -204,131 +204,72 @@ function transform3DayData(rawData, options = {}) {
     const ciData = elementMap['舒適度指數'] || [];
     const weatherData = elementMap['天氣現象'] || [];
 
-    // 建立溫度的時間區間陣列
-    const tempIntervals = [];
-    tempData.forEach(t => {
-        const dataTime = t.DataTime;
-        const value = parseInt(t.ElementValue?.[0]?.Temperature || t.ElementValue?.[0]?.value);
-        
-        if (dataTime && !Number.isNaN(value)) {
-            const time = parseDateTime(dataTime);
-            const nextHour = new Date(time);
-            nextHour.setHours(nextHour.getHours() + 1);
-            
-            tempIntervals.push({
-                start: time,
-                end: nextHour,
-                value: value
-            });
-        }
-    });
-
-    // 建立降雨機率的時間區間陣列
-    const popIntervals = [];
+    // 建立 PoP 的時間 -> 值 映射（方便依時間查詢，而非依索引）
+    const popMap = {};
     popData.forEach(p => {
-        const startTime = p.StartTime || p.startTime;
-        const endTime = p.EndTime || p.endTime;
-        const value = parseInt(p.ElementValue?.[0]?.ProbabilityOfPrecipitation || p.ElementValue?.[0]?.value);
-        
-        if (startTime && endTime && !Number.isNaN(value)) {
-            popIntervals.push({
-                start: parseDateTime(startTime),
-                end: parseDateTime(endTime),
-                value: value
-            });
+        const t = p.DataTime || p.StartTime || p.startTime;
+        const v = parseInt(p.ProbabilityOfPrecipitation || p.ElementValue?.[0]?.value);
+        if (t && !Number.isNaN(v)) {
+            popMap[t] = v;
         }
     });
 
-    // 建立舒適度指數的時間區間陣列
-    const ciIntervals = [];
-    ciData.forEach(c => {
-        const dataTime = c.DataTime;
-        const description = c.ElementValue?.[0]?.ComfortIndexDescription || c.ComfortIndexDescription;
-        
-        if (dataTime && description) {
-            const time = parseDateTime(dataTime);
-            const nextHour = new Date(time);
-            nextHour.setHours(nextHour.getHours() + 1);
-            
-            ciIntervals.push({
-                start: time,
-                end: nextHour,
-                description: description
-            });
-        }
-    });
-
-    // 建立天氣現象的時間區間陣列
-    const weatherIntervals = [];
-    weatherData.forEach(w => {
-        const startTime = w.StartTime || w.startTime;
-        const endTime = w.EndTime || w.endTime;
-        const wText = w.ElementValue?.[0]?.Weather || w.ElementValue?.[0]?.value;
-        const wCode = w.ElementValue?.[0]?.WeatherCode || w.ElementValue?.[1]?.value;
-        
-        if (startTime && endTime) {
-            weatherIntervals.push({
-                start: parseDateTime(startTime),
-                end: parseDateTime(endTime),
-                weather: wText || '',
-                weatherCode: wCode || ''
-            });
-        }
-    });
-
-    // 輔助函式：根據時間點查找對應的溫度
-    const findTemp = (dateTime) => {
-        const time = parseDateTime(dateTime);
-        for (const interval of tempIntervals) {
-            if (time >= interval.start && time < interval.end) {
-                return interval.value;
-            }
-        }
-        return null;
-    };
-
-    // 輔助函式：根據時間點查找對應的降雨機率
-    const findRainProb = (dateTime) => {
-        const time = parseDateTime(dateTime);
-        for (const interval of popIntervals) {
-            if (time >= interval.start && time < interval.end) {
-                return interval.value;
-            }
-        }
-        return null;
-    };
-
-    // 輔助函式：根據時間點查找對應的舒適度
-    const findComfort = (dateTime) => {
-        const time = parseDateTime(dateTime);
-        for (const interval of ciIntervals) {
-            if (time >= interval.start && time < interval.end) {
-                return interval.description;
-            }
-        }
-        return null;
-    };
-
-    // 輔助函式：根據時間點查找對應的天氣現象
-    const findWeather = (dateTime) => {
-        const time = parseDateTime(dateTime);
-        for (const interval of weatherIntervals) {
-            if (time >= interval.start && time < interval.end) {
-                return {
-                    weather: interval.weather,
-                    weatherCode: interval.weatherCode
-                };
-            }
-        }
-        return null;
-    };
-
-    // 按日期分組，並以溫度時間序列為主收集各項指標
+    // 按日期分組，並以時間序列為主收集各項指標
     const dailyData = {};
 
-    // 以溫度的時間序列為主軸（每小時一筆）
-    tempData.forEach(item => {
-        const timeStr = item.DataTime;
+    // 先用溫度時間序列收集每日溫度統計（不再當成所有元素的主時間軸）
+    // 其餘像天氣現象則改用各自的時間序列尋找「最近的未來時段」。
+    tempData.forEach((item, index) => {
+        const timeStr = item.DataTime || item.StartTime || item.startTime;
+        if (!timeStr) return;
+        const date = parseDateTime(timeStr);
+        const dateKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
+        //console.log('處理溫度時間點', timeStr, '對應日期', dateKey);
+
+        if (!dailyData[dateKey]) {
+            dailyData[dateKey] = {
+                date: timeStr,
+                temps: [], // 收集當日所有溫度
+                rains: [], // 收集當日所有降雨機率
+                comforts: [], // 收集當日所有舒適度
+                weathers: [], // 收集當日所有天氣現象
+                weatherCodes: [], // 收集當日所有天氣代碼
+                slots: [] // 之後會用「天氣現象」本身的時間序列填入
+            };
+        }
+
+        const dayBucket = dailyData[dateKey];
+
+        // 溫度
+        const tVal = parseInt(item.Temperature || item.ElementValue?.[0]?.Temperature || item.ElementValue?.[0]?.value);
+        if (!Number.isNaN(tVal)) {
+             dayBucket.temps.push(tVal);
+        }
+
+        // 3小時降雨機率（以時間字串為鍵查找）
+        const popTime = timeStr;
+        if (popTime && popMap.hasOwnProperty(popTime)) {
+            const popVal = popMap[popTime];
+            console.log('處理降雨機率時間點', popTime, '對應值', popVal);
+            if (!Number.isNaN(popVal)) {
+                 dayBucket.rains.push(popVal);
+                 console.log('3小時降雨機率 popVal', popVal);
+            }
+        }
+
+        // 舒適度描述
+        if (ciData[index]) {
+            const ciVal = ciData[index].ComfortIndexDescription || ciData[index].ElementValue?.[0]?.value;
+            if (ciVal) {
+                 dayBucket.comforts.push(ciVal);
+            }
+        }
+    });
+
+    // 再以「天氣現象」時間序列為主，建立 slots，供後續就近時間挑選
+    weatherData.forEach(item => {
+        const timeStr = item.DataTime || item.StartTime || item.startTime;
         if (!timeStr) return;
         const date = parseDateTime(timeStr);
         const dateKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
@@ -351,38 +292,22 @@ function transform3DayData(rawData, options = {}) {
             minutesOfDay: date.getHours() * 60 + date.getMinutes()
         };
 
-        // 溫度（當前項目）
-        const temp = parseInt(item.ElementValue?.[0]?.Temperature || item.ElementValue?.[0]?.value);
-        if (!Number.isNaN(temp)) {
-            dayBucket.temps.push(temp);
-            slot.temp = temp;
+        const wText = item.Weather || item.ElementValue?.[0]?.Weather || item.ElementValue?.[0]?.value;
+        const wCode = item.WeatherCode || item.ElementValue?.[0]?.WeatherCode || item.ElementValue?.[1]?.value;
+
+        if (wText) {
+            dayBucket.weathers.push(wText);
+            slot.weather = wText;
+        }
+        if (wCode) {
+            dayBucket.weatherCodes.push(wCode);
+            slot.weatherCode = wCode;
         }
 
-        // 使用時間區間查找降雨機率
-        const rainProb = findRainProb(timeStr);
-        if (rainProb !== null) {
-            dayBucket.rains.push(rainProb);
-            slot.rainProb = rainProb;
-        }
-
-        // 使用時間區間查找舒適度
-        const comfort = findComfort(timeStr);
-        if (comfort) {
-            dayBucket.comforts.push(comfort);
-            slot.comfort = comfort;
-        }
-
-        // 使用時間區間查找天氣現象
-        const weatherInfo = findWeather(timeStr);
-        if (weatherInfo) {
-            if (weatherInfo.weather) {
-                dayBucket.weathers.push(weatherInfo.weather);
-                slot.weather = weatherInfo.weather;
-            }
-            if (weatherInfo.weatherCode) {
-                dayBucket.weatherCodes.push(weatherInfo.weatherCode);
-                slot.weatherCode = weatherInfo.weatherCode;
-            }
+        // 將對應時間的 PoP 值掛到 slot 上（若有）
+        const slotPop = popMap[timeStr];
+        if (typeof slotPop === 'number' && !Number.isNaN(slotPop)) {
+            slot.rainProb = slotPop;
         }
 
         dayBucket.slots.push(slot);
@@ -391,61 +316,41 @@ function transform3DayData(rawData, options = {}) {
     // 計算每日統計值，取前三天
     const now = new Date();
     const nowMinutesOfDay = now.getHours() * 60 + now.getMinutes();
-    const sixHoursLater = nowMinutesOfDay + 360; // 當下時間 + 6 小時（360 分鐘）
 
     const dailyForecasts = Object.entries(dailyData)
         .slice(0, 3)
-        .map(([key, data], dayIndex) => {
+        .map(([key, data]) => {
             const temps = data.temps.length > 0 ? data.temps : [25];
             const rains = data.rains.length > 0 ? data.rains : [0];
 
-            // 備援值（中間值代表整天平均狀況）
-            const fallbackWeather = data.weathers[Math.floor(data.weathers.length / 2)] || '晴天';
-            const fallbackCode = data.weatherCodes[Math.floor(data.weatherCodes.length / 2)] || '01';
+            // 找出離使用者目前時間（以當天的時刻）最近的時間點
+            let closestSlot = null;
+            let minDiff = Infinity;
+
+            // 只選擇「未來」的時間點（分鐘數大於等於目前時間）
+            if (Array.isArray(data.slots)) {
+                const futureSlots = data.slots.filter(s =>
+                    typeof s.minutesOfDay === 'number' && s.minutesOfDay >= nowMinutesOfDay
+                );
+
+                futureSlots.forEach(s => {
+                    const diff = Math.abs(s.minutesOfDay - nowMinutesOfDay);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestSlot = s;
+                    }
+                });
+            }
+
+            const fallbackWeather = data.weathers[Math.floor(data.weathers.length / 2)] || '多雲';
+            const fallbackCode = data.weatherCodes[Math.floor(data.weatherCodes.length / 2)] || '04';
             const fallbackComfort = data.comforts[Math.floor(data.comforts.length / 2)] || '舒適';
             const fallbackRainProb = Math.max(...rains);
 
-            let weather, weatherCode, comfort, rainProb;
-
-            // 第 0 天（今天）：取當下時間往後推 6 小時
-            if (dayIndex === 0) {
-                let targetSlot = null;
-
-                if (Array.isArray(data.slots) && data.slots.length > 0) {
-                    // 找出 >= sixHoursLater 的最近時段
-                    const futureSlots = data.slots.filter(s =>
-                        typeof s.minutesOfDay === 'number' && s.minutesOfDay >= sixHoursLater
-                    );
-
-                    if (futureSlots.length > 0) {
-                        // 取最接近 6 小時後的時段
-                        targetSlot = futureSlots.reduce((closest, slot) => {
-                            const diff = Math.abs(slot.minutesOfDay - sixHoursLater);
-                            const closestDiff = Math.abs(closest.minutesOfDay - sixHoursLater);
-                            return diff < closestDiff ? slot : closest;
-                        });
-                    } else {
-                        // 若 6 小時後已超過今日，取當天最後一個時段
-                        targetSlot = data.slots[data.slots.length - 1];
-                    }
-                }
-
-                weather = (targetSlot && targetSlot.weather) || fallbackWeather;
-                weatherCode = (targetSlot && targetSlot.weatherCode) || fallbackCode;
-                comfort = (targetSlot && targetSlot.comfort) || fallbackComfort;
-                rainProb = (targetSlot && typeof targetSlot.rainProb === 'number') ? targetSlot.rainProb : fallbackRainProb;
-
-                // console.log('今天取值（6小時後）:', { targetSlot, weather, weatherCode, rainProb });
-            } 
-            // 第 1 天（明天）、第 2 天（後天）：使用 fallback 值
-            else {
-                weather = fallbackWeather;
-                weatherCode = fallbackCode;
-                comfort = fallbackComfort;
-                rainProb = fallbackRainProb;
-
-                // console.log(`第 ${dayIndex} 天取值（fallback）:`, { weather, weatherCode, rainProb });
-            }
+            const weather = (closestSlot && closestSlot.weather) || fallbackWeather;
+            const weatherCode = (closestSlot && closestSlot.weatherCode) || fallbackCode;
+            const comfort = (closestSlot && closestSlot.comfort) || fallbackComfort;
+            const rainProb = (closestSlot && typeof closestSlot.rainProb === 'number') ? closestSlot.rainProb : fallbackRainProb;
 
             return {
                 date: data.date,

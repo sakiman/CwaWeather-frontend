@@ -16,7 +16,6 @@
     --text-dark: #4A4A4A;
     --text-medium: #6B6B6B;
     --text-light: #9B9B9B;
-    --text-bloody: #bd5269;
     
     /* 動森經典色（保留部分） */
     --ac-green: #7DE1A9;
@@ -214,7 +213,7 @@ body {
 .district-card-hint {
     flex: 1;
     font-size: 0.75rem;
-    color: var(--text-bloody);
+    color: var(--text-light);
 }
 
 .district-card-icon {
