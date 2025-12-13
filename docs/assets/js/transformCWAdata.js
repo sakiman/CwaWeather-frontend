@@ -393,6 +393,9 @@ function transform3DayData(rawData, options = {}) {
     const nowMinutesOfDay = now.getHours() * 60 + now.getMinutes();
     const sixHoursLater = nowMinutesOfDay + 360; // 當下時間 + 6 小時（360 分鐘）
 
+    // 取得今天的日期 key（用於判斷 API 是否還有今天的資料）
+    const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+
     const dailyForecasts = Object.entries(dailyData)
         .slice(0, 3)
         .map(([key, data], dayIndex) => {
@@ -405,28 +408,60 @@ function transform3DayData(rawData, options = {}) {
             const fallbackComfort = data.comforts[Math.floor(data.comforts.length / 2)] || '舒適';
             const fallbackRainProb = Math.max(...rains);
 
-            let weather, weatherCode, comfort, rainProb;
+            let weather, weatherCode, comfort, rainProb, minTemp, maxTemp;
 
-            // 第 0 天（今天）：取當下時間往後推 6 小時
+            // 判斷：如果第一筆資料不是今天，代表 API 已無今天資料
+            const firstDayKey = Object.keys(dailyData)[0];
+            const apiHasToday = firstDayKey === todayKey;
+
+            // 第 0 天處理：
+            // - 若 API 有今天資料：取當下時間往後推 6 小時的區間
+            // - 若 API 無今天資料（已過午夜）：取明天 00:00 時段
             if (dayIndex === 0) {
                 let targetSlot = null;
+                let rangeTemps = [];
 
                 if (Array.isArray(data.slots) && data.slots.length > 0) {
-                    // 找出 >= sixHoursLater 的最近時段
-                    const futureSlots = data.slots.filter(s =>
-                        typeof s.minutesOfDay === 'number' && s.minutesOfDay >= sixHoursLater
-                    );
+                    if (apiHasToday) {
+                        // API 有今天資料：使用 6 小時區間邏輯
+                        const rangeSlots = data.slots.filter(s =>
+                            typeof s.minutesOfDay === 'number' && 
+                            s.minutesOfDay >= nowMinutesOfDay && 
+                            s.minutesOfDay <= sixHoursLater
+                        );
 
-                    if (futureSlots.length > 0) {
-                        // 取最接近 6 小時後的時段
-                        targetSlot = futureSlots.reduce((closest, slot) => {
-                            const diff = Math.abs(slot.minutesOfDay - sixHoursLater);
-                            const closestDiff = Math.abs(closest.minutesOfDay - sixHoursLater);
-                            return diff < closestDiff ? slot : closest;
-                        });
+                        if (rangeSlots.length > 0) {
+                            rangeSlots.forEach(s => {
+                                if (typeof s.temp === 'number') {
+                                    rangeTemps.push(s.temp);
+                                }
+                            });
+
+                            targetSlot = rangeSlots.reduce((closest, slot) => {
+                                const diff = Math.abs(slot.minutesOfDay - sixHoursLater);
+                                const closestDiff = Math.abs(closest.minutesOfDay - sixHoursLater);
+                                return diff < closestDiff ? slot : closest;
+                            });
+                        } else {
+                            // 6 小時後已超過今日，取當天最後時段
+                            const lastSlot = data.slots[data.slots.length - 1];
+                            targetSlot = lastSlot;
+
+                            data.slots.forEach(s => {
+                                if (typeof s.minutesOfDay === 'number' && 
+                                    s.minutesOfDay >= nowMinutesOfDay && 
+                                    typeof s.temp === 'number') {
+                                    rangeTemps.push(s.temp);
+                                }
+                            });
+                        }
                     } else {
-                        // 若 6 小時後已超過今日，取當天最後一個時段
-                        targetSlot = data.slots[data.slots.length - 1];
+                        // API 無今天資料：直接取明天 00:00 時段（第一個 slot）
+                        targetSlot = data.slots[0];
+                        if (targetSlot && typeof targetSlot.temp === 'number') {
+                            rangeTemps.push(targetSlot.temp);
+                        }
+                        // console.log('API 已無今天資料，使用明天 00:00 時段:', targetSlot);
                     }
                 }
 
@@ -435,16 +470,26 @@ function transform3DayData(rawData, options = {}) {
                 comfort = (targetSlot && targetSlot.comfort) || fallbackComfort;
                 rainProb = (targetSlot && typeof targetSlot.rainProb === 'number') ? targetSlot.rainProb : fallbackRainProb;
 
-                // console.log('今天取值（6小時後）:', { targetSlot, weather, weatherCode, rainProb });
+                if (rangeTemps.length > 0) {
+                    minTemp = Math.min(...rangeTemps);
+                    maxTemp = Math.max(...rangeTemps);
+                } else {
+                    minTemp = Math.min(...temps);
+                    maxTemp = Math.max(...temps);
+                }
+
+                // console.log('今天取值:', { apiHasToday, targetSlot, weather, weatherCode, rainProb, minTemp, maxTemp });
             } 
-            // 第 1 天（明天）、第 2 天（後天）：使用 fallback 值
+            // 第 1 天（明天）、第 2 天（後天）：使用 fallback 值和全天溫度
             else {
                 weather = fallbackWeather;
                 weatherCode = fallbackCode;
                 comfort = fallbackComfort;
                 rainProb = fallbackRainProb;
+                minTemp = Math.min(...temps);
+                maxTemp = Math.max(...temps);
 
-                // console.log(`第 ${dayIndex} 天取值（fallback）:`, { weather, weatherCode, rainProb });
+                // console.log(`第 ${dayIndex} 天取值（fallback）:`, { weather, weatherCode, rainProb, minTemp, maxTemp });
             }
 
             return {
@@ -452,8 +497,8 @@ function transform3DayData(rawData, options = {}) {
                 dateFormatted: formatDate(data.date),
                 weather,
                 weatherCode,
-                minTemp: Math.min(...temps),
-                maxTemp: Math.max(...temps),
+                minTemp,
+                maxTemp,
                 rainProb,
                 comfort
             };
