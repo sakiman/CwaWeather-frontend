@@ -139,7 +139,7 @@ body {
    ============================================ */
 
 .header {
-    padding: 8px 0px 8px 0px; /* 左右為零，以顯示完整的城市按鈕，不被截斷 */ /*padding: 上 右 下 左*/
+    padding: 8px 0px 8px 0px !important; /* 左右為零，以顯示完整的城市按鈕，不被截斷 */ /*padding: 上 右 下 左*/
     background: rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
