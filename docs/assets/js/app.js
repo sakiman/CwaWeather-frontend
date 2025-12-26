@@ -836,14 +836,14 @@ function initGeolocation() {
     
     navigator.geolocation.getCurrentPosition(
         async (position) => {
-            const { latitude, longitude } = position.coords;
+            const { latitude, longitude, accuracy } = position.coords;
 
             // 將使用者座標寫入全域，供 3day 轉換時就近選擇 LocationName 使用
             try {
                 window.__userLat = latitude;
                 window.__userLng = longitude;
 
-                console.log(`使用者座標：緯度 ${latitude}, 經度 ${longitude}`);
+                console.log(`使用者座標：緯度 ${latitude}, 經度 ${longitude}，精度 ${accuracy.toFixed(0)} 公尺`);
             } catch (e) {
                 // 在非瀏覽器環境忽略
             }
@@ -892,8 +892,9 @@ function initGeolocation() {
             fetchWeather(currentCity);
         },
         {
-            timeout: 5000,
-            maximumAge: 300000 // 5 分鐘快取
+            enableHighAccuracy: true, // 要求高精度（使用 GPS）
+            timeout: 5000,            // 延長 timeout 至 5 秒
+            maximumAge: 60000 // 允許使用 1 分鐘內的快取位置
         }
     );
 }
