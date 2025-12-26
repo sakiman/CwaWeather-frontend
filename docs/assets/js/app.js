@@ -5,8 +5,8 @@
 // 中央氣象署開放資料平臺之資料擷取API
 // https://opendata.cwa.gov.tw/dist/opendata-swagger.html
 
-// Nominatim 反向地理編碼服務
-// https://nominatim.org/release-docs/develop/api/Reverse/
+// TGOS 地理資訊服務
+// https://api.tgos.tw/
 
 // 六都城市設定
 const CITIES = {
@@ -30,6 +30,8 @@ const threeDayRawCache = {};
 
 // 使用者經緯度（由瀏覽器地理定位取得，用於就近選擇 3day LocationName）
 // 會在 initGeolocation 成功後寫入 window.__userLat / window.__userLng
+// 使用者行政區（由 TGOS API 取得）
+// 會在 initGeolocation 成功後寫入 window.__tgosDistrict
 
 
 // 六都經緯度範圍
@@ -425,7 +427,7 @@ async function fetchWeather(cityKey = currentCity) {
                 }
 
                 // 判斷此次請求的 cityKey 是否為地理定位到的城市
-                // 若是定位城市：使用就近鄉鎮邏輯
+                // 若是定位城市：優先使用 TGOS 取得的行政區，其次使用就近座標邏輯
                 // 若是手動切換到其他城市：一律使用該縣市 Location 陣列中的第一個鄉鎮
                 let preferNearestByLocation = false;
                 try {
@@ -723,38 +725,67 @@ function renderPlaygroundWeathers() {
 // ============================================
 
 /**
- * 使用 OpenStreetMap Nominatim 進行反向地理編碼，取得 suburb（行政區近似）與 city（縣市中文名）
- * API: https://nominatim.openstreetmap.org/reverse?lat={緯度}&lon={經度}&format=json&addressdetails=1
+ * 使用 TGOS API 進行反向地理編碼，取得行政區
+ * API: https://api.tgos.tw/TGOS_API/tgos
+ * @param {number} lat - WGS84 緯度
+ * @param {number} lng - WGS84 經度
+ * @returns {Promise<string|null>} 行政區名稱，例如："五股區"
  */
-async function fetchSuburbFromCoords(lat, lng) {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&format=json&addressdetails=1`;
-
-    const res = await fetch(url, {
-        headers: {
-            'Accept': 'application/json',
-            // 根據 Nominatim 使用規範，建議提供識別用的 User-Agent
-            'User-Agent': 'CwaWeather-frontend/1.0 (https://example.com)'
+async function fetchDistrictFromCoords(lat, lng) {
+    return new Promise((resolve) => {
+        try {
+            // 檢查 TGOS SDK 是否已載入
+            if (typeof TGOS === 'undefined') {
+                console.warn('TGOS SDK 尚未載入');
+                resolve(null);
+                return;
+            }
+            
+            // 將 WGS84 經緯度轉換為 TWD97 座標
+            const twd97 = wgs84ToTwd97(lng, lat);
+            
+            // 建立 TGOS 地址查詢物件
+            const addrlocate = new TGOS.TGAddress();
+            
+            // 建立 TGOS Point 物件
+            const addrpt = new TGOS.TGPoint(twd97.x, twd97.y);
+            
+            // 使用 nearestAddress 查詢最鄰近地址
+            addrlocate.nearestAddress(addrpt, TGOS.TGCoordSys.EPSG3826, 
+                function(result, status) {
+                    try {
+                        if (!result || !result.formattedAddress) {
+                            console.warn('TGOS 未回傳地址');
+                            resolve(null);
+                            return;
+                        }
+                        
+                        const address = result.formattedAddress;
+                        console.log('TGOS 地址:', address);
+                        
+                        // 從地址字串中解析行政區
+                        const district = parseDistrictFromAddress(address);
+                        
+                        // 暫存到全域，方便後續使用
+                        try {
+                            window.__tgosDistrict = district;
+                            window.__tgosAddress = address;
+                        } catch (e) {
+                            // 非瀏覽器環境可忽略
+                        }
+                        
+                        resolve(district);
+                    } catch (e) {
+                        console.error('TGOS 結果處理失敗:', e);
+                        resolve(null);
+                    }
+                }
+            );
+        } catch (e) {
+            console.error('TGOS 反向地理編碼失敗:', e);
+            resolve(null);
         }
     });
-
-    if (!res.ok) {
-        throw new Error('Reverse geocoding failed');
-    }
-
-    const data = await res.json();
-    const addr = data && data.address ? data.address : {};
-    const suburb = addr.suburb || null;
-    const cityName = addr.city || null; // 例如："臺北市"
-
-    try {
-        // 將 suburb / city 暫存到全域，方便除錯或後續 mapping 使用
-        window.__osmSuburb = suburb;
-        window.__osmCity = cityName;
-    } catch (e) {
-        // 非瀏覽器環境可忽略
-    }
-
-    return suburb;
 }
 
 /**
@@ -817,38 +848,20 @@ function initGeolocation() {
                 // 在非瀏覽器環境忽略
             }
 
-            // 反向地理編碼取得 suburb / city（city 會是中文，如「臺北市」）
+            // 使用 TGOS 反向地理編碼取得行政區
             try {
-                const suburb = await fetchSuburbFromCoords(latitude, longitude);
-                if (suburb) {
-                    console.log('Nominatim suburb:', suburb);
+                const district = await fetchDistrictFromCoords(latitude, longitude);
+                if (district) {
+                    console.log('TGOS 行政區:', district);
                 } else {
-                    console.log('Nominatim suburb 未取得');
+                    console.log('TGOS 行政區未取得');
                 }
             } catch (e) {
-                console.warn('Nominatim 反向地理編碼失敗:', e.message);
+                console.warn('TGOS 反向地理編碼失敗:', e.message);
             }
             
-            // 優先使用 Nominatim 回傳的 city（中文）對應到 CITIES 的英文 key
-            let detectedCity = null;
-            try {
-                if (typeof window !== 'undefined' && window.__osmCity) {
-                    const osmCityName = window.__osmCity; // 例如：「臺北市」
-                    for (const [key, city] of Object.entries(CITIES)) {
-                        if (city.name === osmCityName) {
-                            detectedCity = key;
-                            break;
-                        }
-                    }
-                }
-            } catch (e) {
-                // 若無法讀取 __osmCity，退回下一步座標判斷
-            }
-
-            // 若 Nominatim city 無法對應，退回原本的經緯度範圍判斷
-            if (!detectedCity) {
-                detectedCity = getCityFromCoordinates(latitude, longitude);
-            }
+            // 使用經緯度範圍判斷城市
+            let detectedCity = getCityFromCoordinates(latitude, longitude);
             
             if (detectedCity) {
                 currentCity = detectedCity;

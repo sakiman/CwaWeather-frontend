@@ -100,7 +100,7 @@ function transform3DayData(rawData, options = {}) {
     // console.log('transform3DayData rawData', rawData);
     // rawData 來自 Fetch3day，結構請參考 3day.json 範例
     // options.preferNearestByLocation 為 true 時：
-    //   優先依 Nominatim suburb 直接比對 LocationName，其次才使用「最近座標」挑選行政區
+    //   優先依 TGOS 取得的行政區直接比對 LocationName，其次才使用「最近座標」挑選行政區
     //   （適用於：目前城市就是地理定位得到的城市）
     // 為 false 時：
     //   一律使用 Location 陣列中的第一個行政區
@@ -133,24 +133,24 @@ function transform3DayData(rawData, options = {}) {
             // console.log('使用指定的 targetDistrictName 選擇行政區：', targetDistrictName);
         }
     } else if (preferNearestByLocation) {
-        // 1) 嘗試使用 Nominatim suburb 直接比對 LocationName
-        let selectedBySuburb = false;
+        // 1) 嘗試使用 TGOS 取得的行政區直接比對 LocationName
+        let selectedByTgos = false;
         try {
-            if (typeof window !== 'undefined' && window.__osmSuburb) {
-                const suburb = window.__osmSuburb;
-                const matched = locationsArray.find(loc => loc.locationName === suburb);
+            if (typeof window !== 'undefined' && window.__tgosDistrict) {
+                const tgosDistrict = window.__tgosDistrict;
+                const matched = locationsArray.find(loc => loc.locationName === tgosDistrict);
                 if (matched) {
                     selectedDistrict = matched;
-                    selectedBySuburb = true;
-                    // console.log('使用 Nominatim suburb 選擇行政區：', suburb);
+                    selectedByTgos = true;
+                    // console.log('使用 TGOS 行政區選擇：', tgosDistrict);
                 }
             }
         } catch (e) {
-            // 無法讀取 window 或 suburb 時略過，交由後續座標邏輯處理
+            // 無法讀取 window 或 tgosDistrict 時略過，交由後續座標邏輯處理
         }
 
-        // 2) 若無 suburb 比對成功，再退回使用「最近座標」邏輯
-        if (!selectedBySuburb) {
+        // 2) 若無 TGOS 比對成功，再退回使用「最近座標」邏輯
+        if (!selectedByTgos) {
             try {
                 if (typeof window !== 'undefined' &&
                     typeof window.__userLat === 'number' &&
