@@ -810,7 +810,56 @@ function showToast(message, type = 'info') {
 }
 
 /**
- * 根據經緯度判斷城市
+ * 從 TGOS 地址字串中解析行政區名稱
+ * @param {string} address - TGOS 回傳的完整地址，例如：「新北市五股區..."
+ * @returns {string|null} 行政區名稱，例如：「五股區」
+ */
+function parseDistrictFromAddress(address) {
+    if (!address) return null;
+    
+    // 匹配「縣市 + 行政區」格式，例如：「新北市五股區」
+    const match = address.match(/([^省]+?[縣市])([^鄉鎮市區]+?[鄉鎮市區])/);
+    if (match && match[2]) {
+        return match[2]; // 回傳行政區，例如：「五股區」
+    }
+    
+    return null;
+}
+
+/**
+ * 從 TGOS 地址字串中解析城市並對應到 cityKey
+ * @param {string} address - TGOS 回傳的完整地址
+ * @returns {string|null} 城市 key 或 null
+ */
+function getCityKeyFromAddress(address) {
+    if (!address) return null;
+    
+    // 城市名稱對應表
+    const cityMapping = {
+        '臺北市': 'taipei',
+        '台北市': 'taipei',
+        '新北市': 'newtaipei',
+        '桃園市': 'taoyuan',
+        '新竹市': 'hsinchu',
+        '臺中市': 'taichung',
+        '台中市': 'taichung',
+        '臺南市': 'tainan',
+        '台南市': 'tainan',
+        '高雄市': 'kaohsiung'
+    };
+    
+    // 從地址中找出城市名稱
+    for (const [cityName, cityKey] of Object.entries(cityMapping)) {
+        if (address.includes(cityName)) {
+            return cityKey;
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * 根據經緯度判斷城市（備援方案，優先使用 TGOS 結果）
  * @param {number} lat - 緯度
  * @param {number} lng - 經度
  * @returns {string|null} 城市 key 或 null
@@ -848,20 +897,33 @@ function initGeolocation() {
                 // 在非瀏覽器環境忽略
             }
 
-            // 使用 TGOS 反向地理編碼取得行政區
+            // 優先使用 TGOS 反向地理編碼取得精確城市與行政區
+            let detectedCity = null;
             try {
                 const district = await fetchDistrictFromCoords(latitude, longitude);
                 if (district) {
                     console.log('TGOS 行政區:', district);
-                } else {
-                    console.log('TGOS 行政區未取得');
+                }
+                
+                // 從 TGOS 地址中解析城市
+                const tgosAddress = window.__tgosAddress;
+                if (tgosAddress) {
+                    detectedCity = getCityKeyFromAddress(tgosAddress);
+                    if (detectedCity) {
+                        console.log('TGOS 解析城市:', CITIES[detectedCity].name);
+                    }
                 }
             } catch (e) {
                 console.warn('TGOS 反向地理編碼失敗:', e.message);
             }
             
-            // 使用經緯度範圍判斷城市
-            let detectedCity = getCityFromCoordinates(latitude, longitude);
+            // 若 TGOS 失敗，才使用經緯度範圍判斷（備援方案）
+            if (!detectedCity) {
+                detectedCity = getCityFromCoordinates(latitude, longitude);
+                if (detectedCity) {
+                    console.log('經緯度範圍判斷城市:', CITIES[detectedCity].name);
+                }
+            }
             
             if (detectedCity) {
                 currentCity = detectedCity;
