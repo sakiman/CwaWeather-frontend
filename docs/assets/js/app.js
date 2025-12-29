@@ -955,8 +955,8 @@ function initGeolocation() {
         },
         {
             enableHighAccuracy: false, // 要求高精度（使用 GPS）
-            timeout: 8000,            // 延長 timeout 至 8 秒
-            maximumAge: 60000 // 允許使用 1 分鐘內的快取位置
+            timeout: 6000,            // 延長 timeout 至 6 秒
+            maximumAge: 0 // 不使用快取位置
         }
     );
 }
