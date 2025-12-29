@@ -8,6 +8,13 @@
 // TGOS 地理資訊服務
 // https://api.tgos.tw/
 
+/*
+同一台電腦，無論用 Chrome & Edge，都是使用 Windows Location Service 資料庫
+所以取得的定位會和在 Google Maps 上看到的定位不太一樣。
+├─ 瀏覽器 → Google Maps → 使用 Google Wi-Fi 資料庫（全球最大、最準確-數十億個 Wi-Fi AP）→ 回傳定位
+└─ 瀏覽器 Geolocation → 使用 Windows Location Service 資料庫（較小-數百萬個 Wi-Fi AP）→ 回傳定位
+ */
+
 // 六都城市設定
 const CITIES = {
     taipei: { name: "臺北市", emoji: "🗼" },
@@ -892,7 +899,12 @@ function initGeolocation() {
                 window.__userLat = latitude;
                 window.__userLng = longitude;
 
-                console.log(`使用者座標：緯度 ${latitude}, 經度 ${longitude}，精度 ${accuracy.toFixed(0)} 公尺`);
+                console.log(`🌍 瀏覽器 Geolocation API 定位結果`);
+                console.log(`   緯度: ${latitude.toFixed(6)}`);
+                console.log(`   經度: ${longitude.toFixed(6)}`);
+                console.log(`   精度: ${accuracy.toFixed(0)} 公尺`);
+                console.log(`   📍 在 Google Maps 查看: https://www.google.com/maps?q=${latitude},${longitude}`);
+                console.log(`   💡 提示: 精度 >100m 表示可能使用 IP 定位，與 Google Maps 差異會較大`);
             } catch (e) {
                 // 在非瀏覽器環境忽略
             }
@@ -954,9 +966,9 @@ function initGeolocation() {
             fetchWeather(currentCity);
         },
         {
-            enableHighAccuracy: false, // 要求高精度（使用 GPS）
-            timeout: 6000,            // 延長 timeout 至 6 秒
-            maximumAge: 0 // 不使用快取位置
+            enableHighAccuracy: true,  // ⚡ 啟用高精度定位（Wi-Fi/GPS 混合，較接近 Google Maps）
+            timeout: 10000,            // 延長 timeout 至 10 秒（高精度需更多時間）
+            maximumAge: 0              // 不使用快取位置，確保取得最新座標
         }
     );
 }
